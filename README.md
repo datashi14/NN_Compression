@@ -44,7 +44,7 @@ TicketSmith is built to run on **Azure Kubernetes Service (AKS)**, leveraging cl
 
 ## 🔬 Scientific Approach
 
-We implement **Iterative Magnitude Pruning (IMP)** to find winning "lottery tickets":
+I implement **Iterative Magnitude Pruning (IMP)** to find winning "lottery tickets":
 
 1.  **Dense Baseline**: Train a full generic model (Theta_0) to convergence.
 2.  **Prune**: Remove the bottom $p\%$ of weights by magnitude (creating a Mask $M$).
