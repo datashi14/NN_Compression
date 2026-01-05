@@ -1,3 +1,4 @@
+experiment_name: cifar10_resnet18_imp
 model:
   family: resnet18
 training:

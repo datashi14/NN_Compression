@@ -115,12 +115,25 @@ def generate_sample_grid(model, device, loader, save_path, samples=16, config=No
         output = model(data)
         preds = output.argmax(dim=1)
         
+    dataset_name = config['training'].get('dataset', 'mnist').lower()
+    
     # Collect n samples
     for i in range(min(samples, len(data))):
         img_tensor = data[i].cpu()
-        # Unnormalize for visualization: (0.1307,), (0.3081,)
-        img_tensor = img_tensor * 0.3081 + 0.1307
-        images_list.append(img_tensor.squeeze().numpy())
+        
+        # Unnormalize for visualization
+        if dataset_name == 'cifar10':
+            # CIFAR-10 means/stds
+            mean = torch.tensor([0.4914, 0.4822, 0.4465]).view(3, 1, 1)
+            std = torch.tensor([0.2023, 0.1994, 0.2010]).view(3, 1, 1)
+            img_tensor = img_tensor * std + mean
+            img_np = img_tensor.permute(1, 2, 0).numpy() # (C, H, W) -> (H, W, C)
+        else:
+            # Assume MNIST defaults
+            img_tensor = img_tensor * 0.3081 + 0.1307
+            img_np = img_tensor.squeeze().numpy()
+            
+        images_list.append(img_np)
         labels_list.append(target[i].item())
         preds_list.append(preds[i].item())
         
@@ -134,7 +147,11 @@ def generate_sample_grid(model, device, loader, save_path, samples=16, config=No
     
     for i in range(len(images_list)):
         ax = axes[i]
-        ax.imshow(images_list[i], cmap='gray')
+        if dataset_name == 'cifar10':
+            ax.imshow(images_list[i]) # RGB
+        else:
+            ax.imshow(images_list[i], cmap='gray') # Grayscale
+            
         color = 'green' if preds_list[i] == labels_list[i] else 'red'
         ax.set_title(f"T:{labels_list[i]} P:{preds_list[i]}", color=color)
         ax.axis('off')
