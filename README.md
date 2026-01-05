@@ -32,7 +32,13 @@ The platform is deployed on **Google Cloud Platform (GCP)** using **GKE (Google 
     - **Manual CD Dispatch**: Precision control over GPU training jobs directly from the GitHub Actions UI.
 3.  **Artifact Store (GCS)**:
     - Centralized, immutable storage in **Google Cloud Storage** for metric logs, model checkpoints, and visual sample grids.
-4.  **Hardware Parity**:
+4.  **Bulletproof Identity (OIDC + WIF)**:
+    - **Zero-Trust Pillars**: Uses Workload Identity Federation to eliminate static keys.
+    - **Secure Attribution**: Enforces strict `--attribute-condition` policies to ensure only authorized repositories can act as the TicketSmith service account.
+5.  **Report Generator**:
+    - A CPU-only job that aggregates all run data into a single **Executive Summary**.
+    - Outputs decision-ready plots (Quality vs. Sparsity) and "Serving Scorecards".
+6.  **Hardware Parity**:
     - Universal container image ensures identical logic across CPU validation and GPU production phases.
 
 ---

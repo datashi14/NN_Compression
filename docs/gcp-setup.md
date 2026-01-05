@@ -93,25 +93,31 @@ To allow our jobs to write to GCS without hardcoded keys, we create a Kubernetes
 gcloud iam service-accounts create ticketsmith-sa
 
 # 2. Grant Permissions to GSA
-PROJECT_ID=$(gcloud config get-value project)
+PROJECT_ID=propane-net-247501
 gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member "serviceAccount:ticketsmith-sa@$PROJECT_ID.iam.gserviceaccount.com" \
     --role "roles/storage.objectAdmin"
 
-# 3. Enable Workload Identity on GKE (if not already)
-# (Already enabled by default on new Autopilot/Standard clusters usually, but good to check)
-gcloud container clusters update ticketsmith \
-    --zone us-central1-a \
-    --workload-pool=$PROJECT_ID.svc.id.goog
+# 3. Setup Workload Identity Federation (OIDC)
+# NOTE: GCP now REQUIRES an --attribute-condition for security.
+gcloud iam workload-identity-pools create github-pool --location="global" --display-name="GitHub Actions Pool"
 
-# 4. Create Kubernetes Namespace & Service Account
-kubectl create namespace ticketsmith
-kubectl create serviceaccount ticketsmith-ksa --namespace ticketsmith
+gcloud iam workload-identity-pools providers create-oidc github-provider \
+    --location="global" \
+    --workload-identity-pool="github-pool" \
+    --display-name="GitHub OIDC Provider" \
+    --issuer-uri="https://token.actions.githubusercontent.com" \
+    --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
+    --attribute-condition="assertion.repository=='datashi14/deeplearning_lottery'"
 
-# 5. Bind KSA to GSA
+# 4. Bind GSA to GitHub Actions Identity
 gcloud iam service-accounts add-iam-policy-binding ticketsmith-sa@$PROJECT_ID.iam.gserviceaccount.com \
     --role roles/iam.workloadIdentityUser \
-    --member "serviceAccount:$PROJECT_ID.svc.id.goog[ticketsmith/ticketsmith-ksa]"
+    --member "principalSet://iam.googleapis.com/projects/$PROJECT_ID/locations/global/workloadIdentityPools/github-pool/attribute.repository/datashi14/deeplearning_lottery"
+
+# 5. Create Kubernetes Namespace & Service Account (KSA)
+kubectl create namespace ticketsmith
+kubectl create serviceaccount ticketsmith-ksa --namespace ticketsmith
 
 # 6. Annotate KSA
 kubectl annotate serviceaccount ticketsmith-ksa \
