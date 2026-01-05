@@ -124,6 +124,12 @@ Global IAM bindings in GCP often silently require the **12-digit Project Number*
 
 - **Lesson**: Always verify identity strings against the raw project metadata when automated bindings fail.
 
+### 4. The "GCP Quota Wall"
+
+Even with a perfect architectural blueprint, production ML is at the mercy of cloud hardware availability. New GCP projects often start with a **GPU Quota of 0**, and requests for T4/L4 accelerators can be initially rejected until the billing account establishes "history."
+
+- **Resolution**: Implemented a "Bridge Strategy" using **Google Colab** and **Local GPU** environments. The core containerized logic remains identical, proving that the platform is ready for GKE as soon as the hardware gates open.
+
 ---
 
 ## 🚦 Local Quickstart
