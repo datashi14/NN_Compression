@@ -49,6 +49,11 @@ jobs:
 
       - name: Get GKE credentials
         run: |
+          if [ -z "$GCP_PROJECT_ID" ]; then
+            echo "ERROR: GCP_PROJECT_ID secret is missing in GitHub!"
+            exit 1
+          fi
+          echo "Connecting to cluster $GKE_CLUSTER in $GKE_ZONE..."
           gcloud container clusters get-credentials "$GKE_CLUSTER" \
             --zone "$GKE_ZONE" \
             --project "$GCP_PROJECT_ID"
