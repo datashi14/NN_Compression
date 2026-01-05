@@ -5,7 +5,7 @@ metadata:
   namespace: ticketsmith
 spec:
   backoffLimit: 0
-  activeDeadlineSeconds: 7200
+  activeDeadlineSeconds: 14400
   template:
     spec:
       serviceAccountName: ticketsmith-ksa
