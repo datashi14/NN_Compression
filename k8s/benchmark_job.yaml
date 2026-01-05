@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ticketsmith-benchmark-{{RUN_ID}}
+  labels:
+    app: ticketsmith
+    component: benchmark
+spec:
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 0
+  activeDeadlineSeconds: 1800
+  template:
+    metadata:
+      labels:
+        app: ticketsmith
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: benchmark
+          image: { { IMAGE_TAG } }
+          imagePullPolicy: Always
+          command:
+            [
+              "python",
+              "-m",
+              "ticketsmith.benchmark_cli",
+              "--config",
+              "configs/imp_mnist.yaml",
+              "--checkpoint",
+              "{{CHECKPOINT_URI}}",
+            ]
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+            requests:
+              nvidia.com/gpu: 1
+              cpu: 1
+              memory: 2Gi
+      nodeSelector:
+        agentpool: gpu
+      tolerations:
+        - key: "sku"
+          operator: "Equal"
+          value: "gpu"
+          effect: "NoSchedule"

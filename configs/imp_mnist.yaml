@@ -1,0 +1,22 @@
+experiment_name: "imp_mnist_v3"
+model:
+  family: "mnist_cnn"
+training:
+  epochs: 3
+  batch_size: 64
+  lr: 0.01
+  momentum: 0.9
+  seed: 42
+pruning:
+  rounds: 3
+  rate: 0.2
+  compare_random: true
+quality_gate:
+  enabled: true
+  max_loss_delta_pct: 0.1
+  max_acc_drop_absolute: 2.0
+benchmark:
+  enabled: true
+  warmup_iters: 5
+  measure_iters: 20
+  batch_sizes: [1, 32, 64]

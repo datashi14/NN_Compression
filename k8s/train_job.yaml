@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ticketsmith-train-dense-{{RUN_ID}}
+  labels:
+    app: ticketsmith
+    experiment: dense-mnist
+spec:
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 0
+  activeDeadlineSeconds: 3600
+  template:
+    metadata:
+      labels:
+        app: ticketsmith
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: active-learning
+          image: { { IMAGE_TAG } }
+          imagePullPolicy: Always
+          command:
+            [
+              "python",
+              "-m",
+              "ticketsmith.train",
+              "--config",
+              "configs/dense_mnist.yaml",
+            ]
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+            requests:
+              nvidia.com/gpu: 1
+              cpu: 1
+              memory: 2Gi
+          volumeMounts:
+            - name: dshm
+              mountPath: /dev/shm
+          env:
+            - name: AZURE_STORAGE_CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: ticketsmith-secrets
+                  key: connection-string
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+      nodeSelector:
+        agentpool: gpu
+      tolerations:
+        - key: "sku"
+          operator: "Equal"
+          value: "gpu"
+          effect: "NoSchedule"
