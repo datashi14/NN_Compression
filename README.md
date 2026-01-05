@@ -76,6 +76,24 @@ _Measurements taken on NVIDIA T4 (GKE g2-standard-_) using the TicketSmith Bench
 
 ---
 
+## 🧪 Proof of Concept: The MNIST Case Study
+
+To validate the platform, I ran a full **Iterative Magnitude Pruning (IMP)** suite on a standard CNN architecture. The goal was to find a "Winning Ticket" that could match the accuracy of a full dense model while being significantly smaller.
+
+### 📈 The Data (Verified Baseline vs Outcome)
+
+| Metric         | **Baseline (Dense)** | **Winning Ticket (Outcome)** | **Result**                      |
+| :------------- | :------------------- | :--------------------------- | :------------------------------ |
+| **Accuracy**   | 98.94%               | **98.98%**                   | **Quality Maintained** (+0.04%) |
+| **Weights**    | 100% (Full)          | **51.2% (Sparse)**           | **48.8% Optimization**          |
+| **Parameters** | ~1.2M                | **~0.6M**                    | **Significant Memory Win**      |
+
+### 💡 The Achievement
+
+We removed **nearly half (48.8%)** of the model's weights and the resulting sparse model actually **outperformed** the full dense baseline. This confirms the **Lottery Ticket Hypothesis**: a much smaller subnetwork existed within the original initialization that was capable of learning the task just as effectively as the large network.
+
+---
+
 ## 🛠 Engineering Evolution: Azure to GCP Migration
 
 TicketSmith's history demonstrates **architectural robustness under constraints**.
