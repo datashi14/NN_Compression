@@ -31,6 +31,7 @@ env:
 
 jobs:
   submit:
+    if: github.actor == github.repository_owner
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,6 +44,8 @@ jobs:
 
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: "gke-gcloud-auth-plugin"
 
       - name: Get GKE credentials
         run: |
