@@ -66,36 +66,65 @@ class ArtifactManager:
         if not self.upload_to_blob:
             return
             
+        # Check for GCS (Google Cloud Storage) first
+        container_env = os.getenv('AZURE_BLOB_CONTAINER', '')
+        if container_env.startswith('gs://'):
+            self._upload_to_gcs(container_env)
+            return
+
         if not connection_string:
             connection_string = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
             
         if not connection_string:
-            print("Warning: Skipping upload, no connection string found.")
+            print("Warning: Skipping upload, no connection string or GCS bucket found.")
             return
 
         try:
             from azure.storage.blob import BlobServiceClient
             blob_service_client = BlobServiceClient.from_connection_string(connection_string)
-            container_name = "ticketsmith-runs"
+            container_name = container_env if container_env else "ticketsmith-runs"
             container_client = blob_service_client.get_container_client(container_name)
             
             if not container_client.exists():
                 container_client.create_container()
                 
-            print(f"Uploading artifacts to container '{container_name}'...")
+            print(f"Uploading artifacts to Azure container '{container_name}'...")
             
             for root, dirs, files in os.walk(self.run_dir):
                 for file in files:
                     local_path = os.path.join(root, file)
-                    # Create blob name relative to base_dir (e.g. runs/run_id/file)
-                    # We want blob structure run_id/file
                     rel_path = os.path.relpath(local_path, self.run_dir)
                     blob_name = f"{self.run_id}/{rel_path}"
                     
                     blob_client = container_client.get_blob_client(blob_name)
                     with open(local_path, "rb") as data:
                         blob_client.upload_blob(data, overwrite=True)
-            print("Upload complete.")
+            print("Azure upload complete.")
             
         except Exception as e:
-            print(f"Error uploading artifacts: {e}")
+            print(f"Error uploading artifacts to Azure: {e}")
+
+    def _upload_to_gcs(self, bucket_uri):
+        try:
+            from google.cloud import storage
+            client = storage.Client()
+            
+            # Parse bucket name from gs://bucket-name
+            bucket_name = bucket_uri.replace('gs://', '')
+            bucket = client.bucket(bucket_name)
+            
+            print(f"Uploading artifacts to GCS bucket '{bucket_name}'...")
+            
+            for root, dirs, files in os.walk(self.run_dir):
+                for file in files:
+                    local_path = os.path.join(root, file)
+                    rel_path = os.path.relpath(local_path, self.run_dir)
+                    blob_name = f"{self.run_id}/{rel_path}"
+                    
+                    blob = bucket.blob(blob_name)
+                    blob.upload_from_filename(local_path)
+                    
+            print("GCS upload complete.")
+            
+        except Exception as e:
+            print(f"Error uploading artifacts to GCS: {e}")

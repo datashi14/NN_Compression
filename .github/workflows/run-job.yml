@@ -1,0 +1,87 @@
+name: run-job
+
+on:
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Which job to run"
+        required: true
+        default: "gpu-smoke"
+        type: choice
+        options:
+          - gpu-smoke
+          - train-dense-gpu
+      region:
+        description: "GCP Region for GKE"
+        required: true
+        default: "us-central1"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  GAR_REPO: ticketsmith
+  IMAGE_NAME: ticketsmith
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GKE_CLUSTER: ticketsmith
+  # Assuming Zonal cluster in -a zone. Change if Regional.
+  GKE_ZONE: ${{ github.event.inputs.region }}-a
+  NAMESPACE: ticketsmith
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Auth to Google Cloud (OIDC)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ticketsmith-ci@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Get GKE credentials
+        run: |
+          gcloud container clusters get-credentials "$GKE_CLUSTER" \
+            --zone "$GKE_ZONE" \
+            --project "$GCP_PROJECT_ID"
+
+      - name: Ensure namespace exists
+        run: kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Overwrite Image & Apply Job
+        run: |
+          REGION="${{ github.event.inputs.region }}"
+          IMAGE_URI="$REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GAR_REPO/$IMAGE_NAME:${GITHUB_SHA::7}"
+
+          # Note: We assume the image from the CURRENT commit is what we want to run.
+          # If the build-push workflow hasn't finished, this pull might fail or pull 'latest'.
+          # For robustness, we fallback to 'latest' if SHA tag shouldn't be enforced strictly here.
+          IMAGE_URI_LATEST="$REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GAR_REPO/$IMAGE_NAME:latest"
+
+          echo "Targeting Image: $IMAGE_URI_LATEST"
+
+          case "${{ github.event.inputs.job }}" in
+            gpu-smoke)
+              # Simple Apply, no image replacement needed as it uses nvidia/cuda base
+              kubectl -n "$NAMESPACE" apply -f k8s/gcp/gpu-smoke.yaml
+              ;;
+            train-dense-gpu)
+              # We need to replace the placeholder PROJECT_ID in the manifest with the real one
+              # And ensure the image matches our repo
+              sed -e "s|PROJECT_ID|$GCP_PROJECT_ID|g" k8s/gcp/train-dense.yaml > k8s/gcp/train-dense-gen.yaml
+              
+              # Apply the manifest
+              kubectl -n "$NAMESPACE" apply -f k8s/gcp/train-dense-gen.yaml
+              ;;
+            *)
+              echo "Unknown job option"
+              exit 1
+              ;;
+          esac
+
+          echo "Job submitted! Check GKE logs for status."

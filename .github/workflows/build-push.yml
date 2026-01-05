@@ -1,0 +1,54 @@
+name: build-and-push
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+permissions:
+  contents: read
+  id-token: write # required for OIDC
+
+env:
+  REGION: us-central1
+  GAR_REPO: ticketsmith
+  IMAGE_NAME: ticketsmith
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Auth to Google Cloud (OIDC)
+        uses: google-github-actions/auth@v2
+        with:
+          # This must match the Provider Name created in Step 4 of gcp-setup.md
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ticketsmith-ci@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker auth for Artifact Registry
+        run: gcloud auth configure-docker $REGION-docker.pkg.dev --quiet
+
+      - name: Build image
+        run: |
+          IMAGE_URI="$REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GAR_REPO/$IMAGE_NAME"
+          # Use short SHA for uniqueness
+          TAG_SHA="${GITHUB_SHA::7}"
+
+          # Build tagging both SHA and latest
+          docker build -t "$IMAGE_URI:$TAG_SHA" -t "$IMAGE_URI:latest" .
+
+      - name: Push image
+        run: |
+          IMAGE_URI="$REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GAR_REPO/$IMAGE_NAME"
+          TAG_SHA="${GITHUB_SHA::7}"
+
+          docker push "$IMAGE_URI:$TAG_SHA"
+          docker push "$IMAGE_URI:latest"

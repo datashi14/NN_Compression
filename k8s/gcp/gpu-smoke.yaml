@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gpu-smoke
+  namespace: ticketsmith
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 900
+  template:
+    spec:
+      restartPolicy: Never
+      # GKE Specific Node Selector
+      nodeSelector:
+        cloud.google.com/gke-accelerator: nvidia-l4
+      # Standard GKE Taints for GPUs
+      tolerations:
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: nvidia-smi
+          image: nvidia/cuda:12.3.2-base-ubuntu22.04
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+          command: ["bash", "-lc", "nvidia-smi && echo 'GCP GPU ONLINE'"]

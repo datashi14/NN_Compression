@@ -4,5 +4,6 @@ pandas
 matplotlib
 pyyaml
 azure-storage-blob
+google-cloud-storage
 tqdm
 psutil

@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ticketsmith-train-dense
+  namespace: ticketsmith
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 7200
+  template:
+    spec:
+      serviceAccountName: ticketsmith-ksa
+      restartPolicy: Never
+      nodeSelector:
+        cloud.google.com/gke-accelerator: nvidia-l4
+      tolerations:
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: runner
+          # Replace PROJECT_ID with the actual project ID closer to execution
+          image: us-central1-docker.pkg.dev/PROJECT_ID/ticketsmith/ticketsmith:latest
+          imagePullPolicy: Always
+          env:
+            # GCP Workload Identity handles auth, we just provide the bucket name
+            - name: AZURE_BLOB_CONTAINER
+              value: "gs://ticketsmith-runs-PROJECT_ID"
+          # The python code needs to detect 'gs://' prefix to use GCS client instead of Azure SDK
+          # This requires a small code update to ticketsmith/utils/storage.py
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+              cpu: "4"
+              memory: "16Gi"
+            requests:
+              cpu: "2"
+              memory: "8Gi"
+          command: ["bash", "-lc"]
+          args:
+            - |
+              python -m ticketsmith.train --config configs/dense_mnist.yaml
