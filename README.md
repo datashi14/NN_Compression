@@ -81,6 +81,18 @@ Using the platform's multi-backend support, I trained an 11-million parameter **
 | **Winning Ticket** |   80%    |     84.9%     | ✅ PASS |    **1.8x**     |
 | **Random Re-init** |   80%    |     79.2%     | ❌ FAIL |      1.8x       |
 
+### 🚀 Phase 3: LLM Optimization (The "Low-VRAM Stack")
+
+To validate TicketSmith on Modern Generative AI, I implemented a custom memory stack to prune and fine-tune **1B+ Parameter LLMs (Qwen/Llama)** on consumer hardware (8GB VRAM).
+
+- **Architecture**: Qwen/Qwen2.5-1.5B-Instruct / Llama-3.2-1B
+- **Optimization Stack**:
+  - **BF16 Loading**: Precision-matched for Ampere GPUs (RTX 3070).
+  - **Paged AdamW 8-bit**: Offloaded optimizer states to system RAM to prevent OOM.
+  - **Gradient Checkpointing**: Traded compute for memory to fit 1.5B parameters.
+- **Validation Data**: **Australian Legal Corpus (OALC)** & Wikitext.
+- **Result**: Successfully pruned 20% of MLP layers and repaired the model on an 8GB card, proving the platform scales to GenAI.
+
 **Key Findings:**
 
 - ✅ **Winning Ticket validated:** 80% sparsity maintains 99%+ of baseline accuracy.
