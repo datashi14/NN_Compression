@@ -124,6 +124,29 @@ TicketSmith is a cloud-native platform deployed on **Google Cloud Platform (GCP)
 5.  **Report Generator**:
     - Aggregates run data into **Executive Summaries** with decision-ready plots.
 
+## 🛠 Tech Stack
+
+**Infrastructure:**
+
+- **Google Kubernetes Engine (GKE)** - Container orchestration
+- **Artifact Registry** - Image storage
+- **Google Cloud Storage** - Artifact persistence
+- **GitHub Actions** - CI/CD automation
+- **Workload Identity Federation** - Zero-trust auth
+
+**ML Framework:**
+
+- **PyTorch 2.0+** - Model training
+- **Transformers (HuggingFace)** - LLM support
+- **BitsAndBytes** - 8-bit optimization
+- **Accelerate** - Multi-GPU support
+
+**Hardware Validated:**
+
+- **NVIDIA T4** (GKE, 16GB)
+- **NVIDIA RTX 3070** (Local, 8GB)
+- **Google Colab** (T4, A100)
+
 ---
 
 ## 🛡️ Production Engineering: Solving Real Infrastructure Challenges
@@ -160,6 +183,14 @@ TicketSmith is a cloud-native platform deployed on **Google Cloud Platform (GCP)
   - Implemented **Global Norm Gradient Clipping** (`max_norm=1.0`).
   - Developed a **Linear Warmup Scheduler** to stabilize `PagedAdamW` states.
 - **Result**: Achieved stable convergence on the **Open Australian Legal Corpus** (3.11 Final Loss).
+
+#### 🔬 Experimental Results: Sparsity Sweep (Llama-3.2-1B)
+
+| Sparsity | Final Loss (OALC) | State               | Analysis                                                                        |
+| :------- | :---------------- | :------------------ | :------------------------------------------------------------------------------ |
+| **20%**  | **3.11**          | ✅ **Ticket Found** | Logic remains robust; safe for production.                                      |
+| **50%**  | **4.31**          | ⚠️ **Degraded**     | Perplexity gap widens; requires longer fine-tuning.                             |
+| **80%**  | **9.60**          | ❌ **Collapse**     | 1B parameters insufficient to retain logic at 80% sparsity (Capacity Collapse). |
 
 ---
 
