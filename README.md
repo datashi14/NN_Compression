@@ -83,15 +83,19 @@ Using the platform's multi-backend support, I trained an 11-million parameter **
 
 ### 🚀 Phase 3: LLM Optimization (The "Low-VRAM Stack")
 
-To validate TicketSmith on Modern Generative AI, I implemented a custom memory stack to prune and fine-tune **1B+ Parameter LLMs (Qwen/Llama)** on consumer hardware (8GB VRAM).
+To validate TicketSmith on Modern Generative AI, I implemented a custom memory stack to prune and fine-tune **1B+ Parameter LLMs** on consumer hardware (8GB VRAM).
 
-- **Architecture**: Qwen/Qwen2.5-1.5B-Instruct / Llama-3.2-1B
+- **Multi-Model Support**: Verified on **Qwen/Qwen2.5-1.5B-Instruct** (Apache 2.0) and **Meta-Llama-3.2-1B-Instruct**.
 - **Optimization Stack**:
   - **BF16 Loading**: Precision-matched for Ampere GPUs (RTX 3070).
-  - **Paged AdamW 8-bit**: Offloaded optimizer states to system RAM to prevent OOM.
+  - **Paged AdamW 8-bit**: Offloaded optimizer states to system RAM.
   - **Gradient Checkpointing**: Traded compute for memory to fit 1.5B parameters.
+- **Stability Engineering**:
+  - **Gradient Clipping**: Prevents "Pruning Shock" and NaN divergence.
+  - **Linear Warmup**: Stabilizes 8-bit optimizer state initialization.
+  - **Weight Guard**: Real-time detection of parameter corruption.
 - **Validation Data**: **Australian Legal Corpus (OALC)** & Wikitext.
-- **Result**: Successfully pruned 20% of MLP layers and repaired the model on an 8GB card, proving the platform scales to GenAI.
+- **Result**: Successfully repaired both Qwen and Llama models at 20% sparsity with <3.5 perplexity on legal text.
 
 **Key Findings:**
 

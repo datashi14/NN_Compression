@@ -103,10 +103,43 @@ def load_trainable_model(model_id):
     patch_qwen_for_pruning(model)
     return model
 
+def load_australian_validation_data():
+    """
+    Loads prestigious Australian datasets for Senior-level validation.
+    """
+    eval_texts = {}
+    
+    print("🇦🇺 Loading 'Legal Standard' (OALC)...")
+    try:
+        # Correct ID + Split for Streaming
+        ds_legal = load_dataset("umarbutler/open-australian-legal-corpus", split='corpus', streaming=True)
+        legal_samples = []
+        for entry in ds_legal:
+            if entry.get('type') == 'decision' and len(entry.get('text', '')) > 500:
+                legal_samples.append(entry['text'][:1000])
+            if len(legal_samples) >= 50: # 50 samples for speed
+                break
+        eval_texts['Legal (OALC)'] = legal_samples
+    except Exception as e:
+        print(f"⚠️ Could not load OALC: {e}")
+
+    # Fallback to Wikitext if OALC fails or for general baseline
+    if not eval_texts:
+         ds_wiki = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
+         eval_texts['General (Wiki)'] = ds_wiki['text'][:50]
+         
+    return eval_texts
+
+import argparse
+
 def main():
+    parser = argparse.ArgumentParser(description="TicketSmith LLM Pruner")
+    parser.add_argument("--model", type=str, default="meta-llama/Llama-3.2-1B-Instruct", 
+                        help="Model ID (e.g., meta-llama/Llama-3.2-1B-Instruct or Qwen/Qwen2.5-1.5B-Instruct)")
+    args = parser.parse_args()
+    
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    # Switching to Qwen 2.5 (Apache 2.0, Logic SOTA for small models)
-    model_id = "Qwen/Qwen2.5-1.5B-Instruct"
+    model_id = args.model
     
     # 1. Load Model (BF16 for Prunability + Forced Device)
     model = load_trainable_model(model_id)
@@ -131,7 +164,7 @@ def main():
     
     # 3. Training Setup with Paged Optimizer (The "Low-VRAM Hack")
     import bitsandbytes as bnb
-    optimizer = bnb.optim.PagedAdamW8bit(model.parameters(), lr=5e-5) 
+    optimizer = bnb.optim.PagedAdamW8bit(model.parameters(), lr=1e-5) 
     
     # 4. Load High-Value Australian Data
     val_datasets = load_australian_validation_data()
@@ -152,3 +185,6 @@ def main():
     print(f"\n🏁 Final Repair Loss: {loss:.4f}")
     
     print(f"Validation Complete through Australian Legal Corpus.")
+
+if __name__ == "__main__":
+    main()
